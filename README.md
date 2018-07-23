@@ -1,2 +1,2 @@
 # FinancialStability_Lab
-Projects related to the assessment of the Financial Sector's stability 
+Financial Stability department's projects
