@@ -128,29 +128,6 @@ ytm_hat = np.array([newton_estimation(filtered_data.iloc[i], price_hat[i], coupo
 print('price MAE is {mae}'.format(mae=mean_absolute_error(filtered_data.stand_price, price_hat)))
 
 
-##distibution of prices
-fig, ax = plt.subplots(1, 3, figsize=(15, 8))
-filtered_data['stand_price'].plot(kind='kde', ax=ax[0], title='True Price', c='r')
-filtered_data['price_hat'] = price_hat
-filtered_data['price_hat'].plot(kind='kde', ax=ax[1], title='Estimated Price', c='g')
-diagonal_price = np.linspace(filtered_data['stand_price'].min(), filtered_data['stand_price'].max(), 1000)
-ax[2].plot(diagonal_price, diagonal_price)
-ax[2].plot(filtered_data['stand_price'], price_hat, ls='', marker='o')
-ax[2].set(ylabel='Estimated Price', xlabel='True Price')
-
-##distibution of yields
-fig, ax = plt.subplots(1, 3, figsize=(15, 8))
-filtered_data['ytm'].plot(kind='kde', ax=ax[0], title='True Yield', c='r')
-filtered_data['ytm_hat'] = ytm_hat
-filtered_data['ytm_hat'].plot(kind='kde', ax=ax[1], title='Estimated Yield', c='g')
-diagonal_ytm = np.linspace(filtered_data['ytm'].min(), filtered_data['ytm'].max(), 1000)
-ax[2].plot(diagonal_ytm, diagonal_ytm)
-ax[2].plot(filtered_data['ytm'], ytm_hat, ls='', marker='o')
-ax[2].set(ylabel='Estimated Yield', xlabel='True Yield')
-plt.show()
-
-(filtered_data['ytm_hat'] / filtered_data['ytm']).plot(kind='kde')
-
 ##plotting and saving Spot rate curve
 draw(beta_best, filtered_data, theor_maturities, CONFIG.SETTLE_DATE, 
      longest_maturity_year, draw_points=True, 
