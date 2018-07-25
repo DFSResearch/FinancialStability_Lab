@@ -29,7 +29,7 @@ save_data = True
 
 
 ### Initialization
-path = os.path.join(datasets_path, 'bonds.xls')
+path = os.path.join(datasets_path, 'bonds.xlsx')
 df = pd.read_excel(path, skiprows=2).rename(columns=CONFIG.NAME_MASK)
 
 
