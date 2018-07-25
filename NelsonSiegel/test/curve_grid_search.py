@@ -30,7 +30,7 @@ clean_data_path = os.path.join(datasets_path, 'clean_data.hdf')
 calendar_data_path = os.path.join(datasets_path, 'coupons_data.hdf')
 save_data = False
 ### Initialization
-path = os.path.join(datasets_path, 'bonds.xls')
+path = os.path.join(datasets_path, 'bonds.xlsx')
 df = pd.read_excel(path, skiprows=2).rename(columns=CONFIG.NAME_MASK)
 
 ### data mungling
