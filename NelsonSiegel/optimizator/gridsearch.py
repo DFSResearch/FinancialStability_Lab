@@ -29,14 +29,15 @@ class grid_search():
         l_args = tuple(l_args)
         res_ = minimize(Loss, beta_init, args=l_args, **kwargs, 
                         callback=lambda xk: print(xk, Loss(beta=xk, df=l_args[0], 
-                                  coupons_cf=l_args[1], streak_data=l_args[2], rho=l_args[3], 
-                                  weight_scheme=l_args[4], tau=tau))) 
+                                 coupons_cf=l_args[1], streak_data=l_args[2], rho=l_args[3], 
+                                 weight_scheme=l_args[4], tau=tau))
+                        ) 
                         
         return res_
     
     #creation of loss frame grid
     def loss_grid(self, **kwargs):
-        #if num_worker == 1 dask will not be used at all to avoid overhead
+        #if num_worker == 1 dask will not be used at all to avoid overhead expenses
         if self.num_workers == 1:
             res_ = []
             for i, tau in enumerate(self.tau_grid):
@@ -44,12 +45,12 @@ class grid_search():
                           self.loss_args, self.beta_init, **kwargs)
                 res_.append(res)
         else:
-            ##parallelization of loop    
+            #parallelization of loop via dask multiprocessing
             values = [delayed(self.minimization_del)(tau, self.Loss, 
                       self.loss_args, self.beta_init, **kwargs) for tau in self.tau_grid]
             res_ = compute(*values, get=dask.multiprocessing.get, num_workers=self.num_workers)
             
-        #putting betas and loss in Pandas DataFrame
+        #putting betas and Loss value in Pandas DataFrame
         loss_frame = pd.DataFrame([], columns=['b0', 'b1', 'b2', 'teta', 'loss'])
         loss_frame['b0'] = [res.x[0] for res in res_]
         loss_frame['b1'] = [res.x[1] for res in res_]
@@ -58,7 +59,7 @@ class grid_search():
         loss_frame['loss'] = [res.fun for res in res_]
         return loss_frame
     
-    #filtering frame from unacceptable data
+    #filtering frame from unacceptable data (spot rates < 0)
     def filter_frame(self, loss_frame):
         accepted_ind = []
         for ind in loss_frame.index:
@@ -67,6 +68,7 @@ class grid_search():
             if (spot_rate_curve >= 0).all():
                 accepted_ind.append(ind)
         loss_frame_filtered = loss_frame.loc[accepted_ind, :]
+        #printing info about № of dropped rows
         n_rows = loss_frame.shape[0]
         n_dropped_rows = n_rows - loss_frame_filtered.shape[0]
         print('{0} out of {1} of rows were dropped'.format(n_dropped_rows, n_rows))
@@ -75,8 +77,8 @@ class grid_search():
     #actual fitting of data
     def fit(self, num_workers=8, return_frame=False, **kwargs):
         if use_one_worker:
-            print('Multiprocessing is not enabled as dask is not installed')
-            print('Install dask to enbale multiprocessing')
+            print('Multiprocessing is not enabled as dask is not installed\n'
+                  'Install dask to enbale multiprocessing')
             self.num_workers = 1
         else:
             self.num_workers = num_workers

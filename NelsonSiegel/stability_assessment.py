@@ -17,6 +17,7 @@ class stability_assession():
         self.settle_dates = pd.date_range(start=self.start_date, end=self.end_date, 
                                   normalize=True, freq=self.freq, closed='right')
         
+        
     def optimize(self, data, **kwargs):
         '''
         Parameters
@@ -45,10 +46,10 @@ class stability_assession():
                            loss_args=loss_args, bounds=bounds, max_deal_span=max_deal_span, **kwargs)
             beta_best = res_.x
         else:
-            tau_grid = np.append(np.arange(self.teta_min, 2, 0.1), np.arange(2, self.teta_max, 0.5))
+            
             beta_init = self.beta_init[:-1]
             bounds = bounds[:-1]
-            grid = grid_search(tau_grid=tau_grid, Loss=self.loss, 
+            grid = grid_search(tau_grid=self.tau_grid, Loss=self.loss, 
                                loss_args=loss_args, beta_init=beta_init)
             beta_best = grid.fit(return_frame=False, method=self.method, 
                                  num_workers=1, bounds=bounds,  **kwargs) 
@@ -56,14 +57,18 @@ class stability_assession():
         return beta_best, theor_maturities
             
     def compute_curves(self, coupons_cf, streak_data, loss, method='SLSQP', solver_type='simult',
-                       teta_min=CONFIG.TETA_MIN, teta_max=CONFIG.TETA_MAX, **kwargs):
+                       teta_min=CONFIG.TETA_MIN, teta_max=CONFIG.TETA_MAX, tau_grid=None, **kwargs):
         assert solver_type in ['simult', 'grid']
         self.solver_type = solver_type
         self.params = pd.Series()
         self.tenors = []
         self.coupons_cf, self.streak_data = (coupons_cf, streak_data)
         self.method, self.teta_min, self.teta_max, self.loss = (method, teta_min, teta_max, loss)
-           
+        if tau_grid is None:
+            self.tau_grid = np.append(np.arange(self.teta_min, 2, 0.1), np.arange(2, self.teta_max, 0.5))
+        else: 
+            self.tau_grid = tau_grid
+            
         for settle_date in self.settle_dates:
             #print settle date in loop if we set in options display = True
             if 'options' in kwargs.keys():
