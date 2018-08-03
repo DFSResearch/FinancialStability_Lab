@@ -1,4 +1,6 @@
-import os, sys
+import os
+import sys
+import warnings
 import pandas as pd
 import numpy as np
 
@@ -14,9 +16,11 @@ import CONFIG
 from stability_assessment import stability_assession
 from datapreparation.preparation_functions import processing_data, read_download_preprocessed_data
 from estimation_ytm.estimation_ytm import new_ytm
-from Loss import yield_Loss, price_Loss, naive_yield_Loss, filtering_ytm
+from Loss import yield_Loss, price_Loss, naive_yield_Loss
+from estimation_ytm.estimation_ytm import filtering_ytm
 from payments_calendar import download_calendar
 
+warnings.simplefilter('ignore')
 plt.style.use('seaborn')
 PATH = os.path.join('..', 'extracted_data')
 datasets_path = os.path.join('..', 'datasets')
@@ -26,10 +30,10 @@ save_data = False
 
 
 #####SET START AND END DATE FOR CURVES CONSTRUCTION:
-START_DATE = '2018-01-01'
+START_DATE = '2014-01-01'
 END_DATE = '2018-07-01'
 ####SET FREQUENCY OF DATES
-FREQ = '1MS'
+FREQ = '6MS'
 
 
 ### Initialization
@@ -68,17 +72,18 @@ constr = ({'type':'ineq',
 #Longest matuiry year of deals in data
 bounds =  ((0, 1), (None, None), (None, None), (CONFIG.TETA_MIN, CONFIG.TETA_MAX))
 options = {'maxiter': 150, 'disp': True}
+tau_grid = np.append(np.arange(0.2, 2, 0.25), np.arange(2, 5.5, 0.5))
 
 #defining loss -- Crucial --
 #possible losses: ['yield_Loss', 'price_Loss', 'naive_yield_Loss']
-loss = yield_Loss
+loss = price_Loss
 
 
 print('start optimization\n')
 ###### OPTIMIZATION
 stab_as = stability_assession(START_DATE, END_DATE, big_dataframe=clean_data,  
                     beta_init=x0, freq=FREQ)
-stab_as.compute_curves(coupons_cf, streak_data, loss=loss, 
+stab_as.compute_curves(coupons_cf, streak_data, loss=loss, tau_grid=tau_grid,
                        options=options, constraints=constr, solver_type='grid')    
 print('end optimization\n')
 
