@@ -8,9 +8,10 @@ except ImportError as e:
     possible_detect_outliers = False
 
 
-def adaptive_samples(df, time_window, min_n_deal=10, use_several_wind=False):
-    if use_several_wind:
-        big_ind = []
+def adaptive_samples(df, time_window, min_n_deal=10, fix_all_cuts=True):
+    big_ind = []
+    if not fix_all_cuts:
+        
         for mat_type in df.bond_maturity_type.unique():
             #filtering by time span of bond and reverse span
             deals = df[(df.bond_maturity_type == mat_type)]
@@ -37,11 +38,24 @@ def adaptive_samples(df, time_window, min_n_deal=10, use_several_wind=False):
             big_ind.extend(long_span_df.index.values)
         df = df.loc[big_ind]
     else:
-        df = df.query('reverse_span < @time_window')
+        for mat_type in df.bond_maturity_type.unique():
+            #filtering by time span of bond and reverse span
+            deals = df[df.bond_maturity_type == mat_type].sort_values(by='reverse_span')
+            deals['count_deals'] = range(1, deals.shape[0] + 1)
+            rev_span_deals = deals.groupby('reverse_span').count_deals.last()
+            #taking most Nth recent_deals
+            needed_rev_span = rev_span_deals >= min_n_deal
+            if  (~needed_rev_span).all():
+                print(f'Too few deals for tenors in {mat_type}, # deals less than {min_n_deal}')
+                rev_span_cut = rev_span_deals.index.max()
+            else:
+                rev_span_cut = rev_span_deals[needed_rev_span].index.min()                
+            big_ind.extend(deals[deals.reverse_span <= rev_span_cut].index.values)
+    df = df.loc[big_ind]
     return df
 
 def choosing_time_frame(settle_date, clean_data, number_cuts=3, lookback=180,
-                        max_days=180, time_window=30, use_several_wind=True, 
+                        max_days=180, time_window=30, fix_all_cuts=True, 
                         min_n_deal=10, fix_first_cut=True):
     
     df = (clean_data.reset_index()
@@ -49,7 +63,10 @@ def choosing_time_frame(settle_date, clean_data, number_cuts=3, lookback=180,
                      .query('settle_date > deal_date')
                      .assign(reverse_span = lambda x: (x.settle_date - x.deal_date).dt.days))
     
-    if use_several_wind == True:
+    if fix_all_cuts:
+        df = df.query('(reverse_span < @max_days)')
+        treshold = [0, 30, 90, 180, 365, 2 * 365, 5 * 365, df.span.max() + 1]
+    else:
         df_ = df.query('(settle_date < end_date)')
         treshold = [0]
         #if we want to fix cut at first year
@@ -74,12 +91,13 @@ def choosing_time_frame(settle_date, clean_data, number_cuts=3, lookback=180,
                     print('Number of cuts is too high')
                     break
             treshold.append(cut_line)
+            
         df['bond_maturity_type'] = pd.cut(df.span, bins=treshold)
         df = df[df.reverse_span < max_days]
         
     #filtering based on time window  
     filtered_data = adaptive_samples(df, time_window=time_window, min_n_deal=min_n_deal,
-                                          use_several_wind=use_several_wind)
+                                          fix_all_cuts=fix_all_cuts)
     return filtered_data.set_index(['deal_date', 'symbol', 'deal_price'])
 
 def outlier_detection(data, contamination=0.015, n_jobs=1, **kwargs):
@@ -92,8 +110,8 @@ def outlier_detection(data, contamination=0.015, n_jobs=1, **kwargs):
     return data
 
 def creating_sample(settle_date, data, time_window, min_n_deal, number_cuts=3, 
-                    lookback=180, max_days=180, adaptive=False, alpha=0.5, 
-                    fix_first_cut=True, detect_outlier=True):
+                    lookback=CONFFIG.LOOKBACK, max_days=CONFFIG.MAX_DAYS, adaptive=False, alpha=0.5, 
+                    fix_first_cut=True, detect_outlier=True, fix_all_cuts=True):
     '''
     Creates dataset for a given settle date
     Parameters
@@ -111,7 +129,7 @@ def creating_sample(settle_date, data, time_window, min_n_deal, number_cuts=3,
     lookback: int
         Number of days
     '''
-    if adaptive is True:
+    if adaptive:
        ##choosing right k
         ncuts_ser = pd.Series()
         k_range = range(1, 6) if fix_first_cut else range(2, 7)
@@ -140,7 +158,7 @@ def creating_sample(settle_date, data, time_window, min_n_deal, number_cuts=3,
         number_cuts = number_cuts - 1
         
     data = choosing_time_frame(settle_date, data, number_cuts=number_cuts, max_days=max_days,
-                                   lookback=lookback, min_n_deal=min_n_deal, 
+                                   lookback=lookback, min_n_deal=min_n_deal, fix_all_cuts=fix_all_cuts,
                                    time_window=time_window, fix_first_cut=fix_first_cut)
     #throwing out outliers
     if detect_outlier:
