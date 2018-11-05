@@ -6,7 +6,7 @@ except ImportError:
 ### Defining required parameters for constructing sample
 #instantiate config
 config = ConfigParser()
-config.read('CONFIG.ini')
+config.read('../CONFIG.ini')
 #MOST IMPORTANT PARAMETERS
 main_configs = {key.upper(): value for key, value in config['essential'].items()}
 
@@ -33,7 +33,7 @@ MAX_YIELD = None
 MIN_YIELD = None
 USE_OTC = True
 NOTES_IN_OTC = True
-MATURITY_FILTER = None #in days
+MATURITY_FILTER = 7 #in days
 DEAL_MARKET = None
 USE_N_WIND = True
 SPECIFIC_DEALS = None
@@ -43,7 +43,7 @@ SPECIFIC_DEALS = None
 N_CUTS = 3
 LOOKBACK = 365
 TIME_WINDOW = 30 #in days
-DETECT_OUTLIERS = True
+DETECT_OUTLIERS = FALSE
 #parameters for simultaneous loss optimization --- used only FIX_TAU = False
 TETA_MAX = 6
 TETA_MIN = 0.5
