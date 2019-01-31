@@ -5,10 +5,11 @@ import CONFIG
 #function of getting adaptive rho
 #0.1 ~ 10% weight of the latest deal;
 base_time_window = 30
-weight_of_deal = np.sqrt(np.exp(1)) - 1 #~65%
+weight_of_deal = 0.1
+
 rho_func = lambda max_days: np.exp(np.log(weight_of_deal) * base_time_window / max_days)
 #weight of deal based on rho
-rev_span_weight = lambda x, rho: np.exp((x / base_time_window) * np.log(rho))
+rev_span_weight = lambda x, rho: np.exp(x*rho)
 
 #slicing tenor on equal, by number of deals, slices
 def equal_slicing_maturity(df, n_cuts):
@@ -37,7 +38,9 @@ class WeightScheme():
         self.time_window = time_window
         self.n_cuts = n_cuts
         self.rho = rho
-
+        
+    rho_func = lambda self, wl ,max_days: np.log(wl) / max_days
+    
     #different weights and their calculation:
     def complex_volume(self):
         self.df['vol_sector'] = equal_slicing_maturity(self.df, self.n_cuts)
@@ -46,7 +49,37 @@ class WeightScheme():
         self.rho_w = np.exp(np.log(self.rho) / 100  * self.df['reverse_span'])
         Wq = (Vq * self.rho_w / self.rho_w.sum()).values
         return Wq
+    
+    def complex_new_av(self):
+        
+        #weight of each maturity basket: 0.25 for 4 baskets
+        W_gr = 1 / self.df['bond_maturity_type'].nunique()
+               
+        for mat_type in self.df['bond_maturity_type'].unique():
+			
+			#deals in this basket
+            deals = self.df[self.df['bond_maturity_type'] == mat_type]
+            
 
+            self.df.loc[self.df['bond_maturity_type'] == mat_type, 'rho'] = self.rho_func(self.last_weight, self.df.reverse_span.max())
+            
+            #weight by age
+            Wq = rev_span_weight2(self.df.loc[self.df['bond_maturity_type'] == mat_type, 'reverse_span'],
+                                 self.df.loc[self.df['bond_maturity_type'] == mat_type, 'rho'])
+            Wq = 10**(-deals.reverse_span/self.df.reverse_span.max())
+			
+            #weight by volume
+            Vq = np.log(deals['volume_kzt']) / np.log(deals['volume_kzt'].sum())
+            W = (Wq * Vq).values
+            
+            #normalization
+            if W.shape[0] > 1:
+                W = W / W.sum()
+            else:
+                W = 1
+            self.df.loc[self.df['bond_maturity_type'] == mat_type, 'weight'] =  W * W_gr
+
+        return self.df['weight'].values
     #even weights between slices but uneven in the slice itself
     def complex_even(self):
         #weight of each slice
