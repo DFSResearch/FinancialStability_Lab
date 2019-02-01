@@ -10,7 +10,7 @@ except ImportError as e:
     to_draw_graphs = False
     
 from weight_scheme import weight
-from ns_func import Z, F
+from ns_func import Z, F, par_yield
 
 spot_nelson, forward_nelson = Z, F
 
@@ -84,10 +84,14 @@ def get_curves(beta, maturities=None, shift=False):
         maturities = np.linspace(1e-6, 20, 1000)
     spot_rates     = spot_nelson(maturities, beta)
     forward_rates  = forward_nelson(maturities, beta)
+    par_yields = par_yield(maturities, beta)
+    
     if shift:
         spot_rates = (np.exp(spot_rates) - 1) 
         forward_rates = (np.exp(forward_rates) - 1) 
-    return spot_rates, forward_rates
+        par_yields = (np.exp(par_yields) - 1) 
+        
+    return spot_rates, forward_rates, par_yields
 
 ### Writting curves to excel
 def curves_to_excel(path, beta, settle_date, maturities=None, shift=False):
@@ -95,20 +99,13 @@ def curves_to_excel(path, beta, settle_date, maturities=None, shift=False):
     Writting beta based spot and forward curves in excel file
     '''
     if maturities is None:
-        maturities = np.linspace(0.001, 30, 1000)
-    spot_rates, forward_rates = get_curves(beta, maturities=maturities, shift=shift)
+        maturities = np.linspace(7/365, 30, 1000)
+    spot_rates, forward_rates, par_yields = get_curves(beta, maturities=maturities, shift=shift)
     rates = pd.DataFrame([spot_rates, forward_rates]).T
     rates.index = pd.Series(maturities, name='years to maturity')
-    rates.columns = ['spot', 'forward']
-    
-    writer = pd.ExcelWriter(path)
-    workbook = writer.book
-    sheetname = 'curves_{}'.format(settle_date)
-    title_fmt = workbook.add_format({'font_size': 14, 'bold':'True'})
-    rates.to_excel(writer, startrow=2, sheet_name=sheetname)
-    worksheet = writer.sheets[sheetname]
-    worksheet.write_string(0, 1, 'Rates at {}'.format(settle_date), title_fmt)
-    worksheet.write_string(1, 1, f'beta: {beta}')
+    rates.columns = ['spot', 'forward', 'par']
+    rates.to_excel(path, sheet_name = f'{settle_date}')
+
     return rates
 
 #Extracting calendar of payment to excel
