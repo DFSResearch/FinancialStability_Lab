@@ -1,4 +1,5 @@
 import numpy as np
+import scipy.integrate as integrate
 
 def F(m, b):
     '''
@@ -46,3 +47,14 @@ def D(m, b):
     return np.exp(-m * (b[0] + (b[1] + b[2]) * (b[3] / m) 
                         * (1 - np.exp(-m / b[3])) 
                         - b[2] * np.exp(-m / b[3])))
+
+
+def par_yield(m, beta):
+    
+    if isinstance(m, np.ndarray):
+        integrals = np.array([integrate.quad(lambda x: D(x, beta),0 , i)[0] for i in m])
+        result = (1- D(m, beta))/(integrals) 
+    else:
+        result = (1- D(m, beta))/(integrate.quad(lambda x: D(x, beta),0 , m)[0]) 
+    
+    return result

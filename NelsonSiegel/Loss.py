@@ -92,7 +92,7 @@ def yield_Loss(beta, df, coupons_cf, streak_data, rho=0.2, weight_scheme='no_wei
                             for i in range(df.shape[0])])
         #calculatting Loss
         W = weight(beta, df=df, rho=rho, weight_scheme=weight_scheme)
-        Loss = (W * np.square(df['ytm'].values - ytm_hat)).sum()
+        Loss = np.linalg.norm(W * (df['ytm'].values - ytm_hat))
     return Loss
 
 def price_Loss(beta, df, coupons_cf, streak_data,
@@ -123,6 +123,6 @@ def price_Loss(beta, df, coupons_cf, streak_data,
         beta = np.append(beta, [tau])
     ind = df.index
     Price = (D(streak_data[ind], beta) * coupons_cf[ind]).sum().values
-    Loss = (weight(beta, df=df, rho=rho, weight_scheme=weight_scheme) *
-            np.square(df.stand_price.values - Price)).sum()
+    Loss = np.linalg.norm(weight(beta, df=df, rho=rho, weight_scheme=weight_scheme) *
+           (df.stand_price.values - Price))
     return Loss
