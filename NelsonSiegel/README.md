@@ -9,10 +9,10 @@ WARNING -- dataset is fully synthetic and doesn't relate to actual deals on bond
 
 ------------------------------------------------------------------------
 Authors:
-- Khakimzhanov Sabit, Departament of Financial Stability, Director
-- Mustafin Yerulan, Departament of Financial Stability, Deputy Director
-- Atabek Dulat, Departament of Financial Stability, leading specialist
-- Kubenbayev Olzhas, Departament of Financial Stability, seniour specialist
+- Khakimzhanov Sabit, Departament of Financial Stability
+- Mustafin Yerulan, Departament of Financial Stability
+- Atabek Dulat, Departament of Financial Stability
+- Kubenbayev Olzhas, Departament of Financial Stability
 
 
 
