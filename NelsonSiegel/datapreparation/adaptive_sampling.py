@@ -6,7 +6,7 @@ try:
     possible_detect_outliers = True
 except ImportError as e:
     possible_detect_outliers = False
-
+import CONFIG
 
 def adaptive_samples(df, time_window, min_n_deal=10, all_baskets_fixed=True):
     
