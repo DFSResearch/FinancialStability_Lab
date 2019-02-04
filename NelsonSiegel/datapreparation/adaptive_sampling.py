@@ -99,8 +99,8 @@ def choosing_time_frame(settle_date, clean_data, number_cuts=3, lookback=180,
                     print('Number of cuts is too high')
                     break
             treshold.append(cut_line)
-        df['bond_maturity_type'] = pd.cut(df.span, bins=treshold)
-        df = df[df.reverse_span < max_days]
+    df['bond_maturity_type'] = pd.cut(df.span, bins=treshold)
+    df = df[df.reverse_span < max_days]
         
     #filtering based on time window  
     filtered_data = adaptive_samples(df, time_window=time_window, min_n_deal=min_n_deal,
