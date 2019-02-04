@@ -104,7 +104,7 @@ def choosing_time_frame(settle_date, clean_data, number_cuts=3, lookback=180,
         
     #filtering based on time window  
     filtered_data = adaptive_samples(df, time_window=time_window, min_n_deal=min_n_deal,
-                                          use_several_wind=use_several_wind)
+                                     all_baskets_fixed=all_baskets_fixed)
     return filtered_data.set_index(['deal_date', 'symbol', 'deal_price'])
 
 def outlier_detection(data, contamination=0.015, n_jobs=1, **kwargs):
@@ -136,6 +136,7 @@ def creating_sample(settle_date, data, time_window, min_n_deal, number_cuts=3,
     lookback: int
         Number of days
     '''
+    thresholds = thresholds
     if adaptive:
        ##choosing right k
         ncuts_ser = pd.Series()
