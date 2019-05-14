@@ -61,11 +61,11 @@ class WeightScheme():
             deals = self.df[self.df['bond_maturity_type'] == mat_type]
             
 
-            self.df.loc[self.df['bond_maturity_type'] == mat_type, 'rho'] = self.rho_func(self.last_weight, self.df.reverse_span.max())
-            
-            #weight by age
-            Wq = rev_span_weight2(self.df.loc[self.df['bond_maturity_type'] == mat_type, 'reverse_span'],
-                                 self.df.loc[self.df['bond_maturity_type'] == mat_type, 'rho'])
+            #self.df.loc[self.df['bond_maturity_type'] == mat_type, 'rho'] = self.rho_func(self.last_weight, self.df.reverse_span.max())
+            #
+            ##weight by age
+            #Wq = rev_span_weight2(self.df.loc[self.df['bond_maturity_type'] == mat_type, 'reverse_span'],
+            #                     self.df.loc[self.df['bond_maturity_type'] == mat_type, 'rho'])
             Wq = 10**(-deals.reverse_span/self.df.reverse_span.max())
 			
             #weight by volume
