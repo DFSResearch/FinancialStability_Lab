@@ -99,6 +99,9 @@ def filtering(df, needed_bonds=None, use_otc=False, notes_in_otc=False, deal_mar
         df = df[~df.symbol.isin(specific_deals)]
         print('specific symbols', df.shape)
         
+    #filtering secondary market by maturity of less than 190 days
+    df = df.drop(df[(df['span'] <190)&(df['deal_type']!=1)].index)
+    
     #dropping empty columns
     df = df.dropna(how='all', axis=1)
     if maturity_filter is not None:
@@ -114,10 +117,33 @@ def filtering(df, needed_bonds=None, use_otc=False, notes_in_otc=False, deal_mar
 def groupping_transactions(df):
     clean_data = df
     ind_col = ['deal_date', 'symbol', 'deal_price']
+    
+    #grouping the primary auctions (weighting YTM and deal price volume)
+    ntk_ind = ['deal_date', 'symbol']
+    ntk_df = df[(df.bond_symb == 'NTK')&(df.deal_type==1)]
+    grouped = ntk_df.groupby(['deal_date','symbol', 'end_date', 'deal_type'])
+    def wavg(group):#3
+        d = group['ytm']
+        w = group['volume_kzt']
+        deal_id = group['Deal ID']
+        deal_price = (group['deal_price']*w).sum()/w.sum()
+        return pd.Series({'ytm':(d * w).sum() / w.sum(), 'Deal ID':deal_id.min(),'deal_price':deal_price, 'stand_price':deal_price})
+    
+    new =grouped.apply(wavg).reset_index()
+    new.set_index(ntk_ind, inplace = True)
+    
+    df.set_index(ntk_ind, inplace = True)
+    df.update(new)
+    df.reset_index(inplace = True)
+    
+    clean_data.set_index(ntk_ind, inplace = True)
+    clean_data.update(df)
+    clean_data.reset_index(inplace = True)
+    
     #aggragating data either by mean or median
     aggregated_by_median = df.groupby(ind_col)[['face_value', 'annual_freq', 'base_time', 'span']].median()
     print('median', aggregated_by_median.shape)
-    aggregated_by_mean = df.groupby(ind_col)[['stand_price', 'clean_price', 'coupon_rate', 'ytm']].mean()
+    aggregated_by_mean = df.groupby(ind_col)[['stand_price', 'clean_price', 'coupon_rate', 'ytm', 'deal_type']].mean()
     print('mean', aggregated_by_mean.shape)
     #Why 9? --- Why not?
     aggregated_by_mean.ytm = aggregated_by_mean.ytm.fillna(9)
