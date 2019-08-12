@@ -71,7 +71,7 @@ def choosing_time_frame(settle_date, clean_data, number_cuts=3, lookback=180,
         df = df.query('(reverse_span < @max_days)')
         
         if baskets == False:
-            treshold = [0, 180, 365, 5 * 365, np.inf]
+            treshold = [0, 190, 370, 5 * 365, np.inf]
         else:
             treshold = baskets
     else:
@@ -99,7 +99,7 @@ def choosing_time_frame(settle_date, clean_data, number_cuts=3, lookback=180,
                     print('Number of cuts is too high')
                     break
             treshold.append(cut_line)
-    df['bond_maturity_type'] = pd.cut(df.span, bins=treshold)
+    df.loc[:,'bond_maturity_type'] = pd.cut(df.span, bins=treshold)
     df = df[df.reverse_span < max_days]
         
     #filtering based on time window  
