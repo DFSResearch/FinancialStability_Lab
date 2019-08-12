@@ -36,17 +36,25 @@ class Bond():
             coupon_rate = first_date['coupon_rate']
             if np.isnan(coupon_rate):
                 #first try to use ytm
-                if ~np.isnan(first_date.ytm) and (first_date.ytm != 0):
+                if ~np.isnan(first_date.ytm) and (first_date.ytm != 0) and and (first_date.deal_price == self.face_value):
                         coupon_rate = first_date.ytm
                         self.unusual_cr = True if coupon_rate > 25 else False
-                #then if it fail, clean_price    
-                else:
+                #then if it fail, clean_price  
+                elif ((np.isnan(first_date.deal_price))|(first_date.deal_price == self.face_value)) and (first_date.ytm == 0):
                     coupon_rate = first_date.clean_price
                     self.unusual_cr = True if (coupon_rate == 0 or 
                                                coupon_rate > 25) else False
-        #properly scaling of coupon rate            
-        self.coupon_rate = coupon_rate / 100
-        assert ~np.isnan(self.coupon_rate), self.symbol
+                else:
+                    #print securities with no info on coupon rate
+                     if self.symbol[:3] in ['MOM', 'MUM']:
+                            print(f'Not enough data for {self.symbol}, deal time: {first_date.name}')
+                     coupon_rate = np.nan
+        #properly scaling of coupon rate
+        if ~np.isnan(coupon_rate):
+            self.coupon_rate = coupon_rate / 100
+        else:
+            self.coupon_rate = np.nan
+        assert self.symbol
         return self
     
     def deals_calendar(self, deals_dates=None, deal_prices=None):

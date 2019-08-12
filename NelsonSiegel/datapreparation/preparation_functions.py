@@ -52,7 +52,7 @@ def filling_values(df, discount_bonds=['NTK', 'MKM']):
     #when yield is zero, yield in reality is coupon rate
     df.loc[(df.ytm == 0) | (df.ytm.isnull()), 'ytm'] = df['coupon_rate'] 
     #filling nan ytm
-    df['ytm'] = df['ytm'].fillna(9)
+    df['ytm'] = df['ytm'].fillna(0)
     df = df[df.deal_price > 1]
     #throwing out deals with too small deal price relative to face value
     df = df[df['face_value'] / df['deal_price'] < 2]
@@ -98,6 +98,11 @@ def filtering(df, needed_bonds=None, use_otc=False, notes_in_otc=False, deal_mar
     if specific_deals is not None:
         df = df[~df.symbol.isin(specific_deals)]
         print('specific symbols', df.shape)
+    
+    ####Exclude short-term secondary market
+    print(df.columns)
+    df = df.drop(df[(df['span'] <190)&(df['deal_type']!=1)].index)#(df['bond_symb']!='NTK')&
+    print(df.columns)
         
     #dropping empty columns
     df = df.dropna(how='all', axis=1)
@@ -112,12 +117,34 @@ def filtering(df, needed_bonds=None, use_otc=False, notes_in_otc=False, deal_mar
 
 #### Groupping of deals is needed for optimization of calculation
 def groupping_transactions(df):
-    clean_data = df
+    clean_data = df.copy()
+    print(df.columns)
     ind_col = ['deal_date', 'symbol', 'deal_price']
     #aggragating data either by mean or median
+    ntk_ind = ['deal_date', 'symbol']
+#    df.reset_index(inplace = True)
+    ntk_df = df[(df.bond_symb == 'NTK')&(df.deal_type==1)]
+    grouped = ntk_df.groupby(['deal_date','symbol', 'end_date', 'deal_type'])#
+    def wavg(group):#3
+        d = group['ytm']
+        w = group['volume_kzt']
+        deal_id = group['Deal ID']
+        deal_price = (group['deal_price']*w).sum()/w.sum()
+        return pd.Series({'ytm':(d * w).sum() / w.sum(), 'Deal ID':deal_id.min(),'deal_price':deal_price, 'stand_price':deal_price})
+    
+    new =grouped.apply(wavg).reset_index()
+    new.set_index(ntk_ind, inplace = True)
+    
+    df.set_index(ntk_ind, inplace = True)
+    df.update(new)
+    df.reset_index(inplace = True)
+    
+    clean_data.set_index(ntk_ind, inplace = True)
+    clean_data.update(df)
+    clean_data.reset_index(inplace = True)
     aggregated_by_median = df.groupby(ind_col)[['face_value', 'annual_freq', 'base_time', 'span']].median()
     print('median', aggregated_by_median.shape)
-    aggregated_by_mean = df.groupby(ind_col)[['stand_price', 'clean_price', 'coupon_rate', 'ytm']].mean()
+    aggregated_by_mean = df.groupby(ind_col)[['stand_price', 'clean_price', 'coupon_rate', 'ytm', 'deal_type']].mean()
     print('mean', aggregated_by_mean.shape)
     #Why 9? --- Why not?
     aggregated_by_mean.ytm = aggregated_by_mean.ytm.fillna(9)
