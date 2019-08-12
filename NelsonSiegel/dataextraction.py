@@ -52,8 +52,10 @@ def draw(beta, df, theor_maturities, title_date,
     #defining zero curbe
     beta = beta.copy()
     spot_rates = spot_nelson(theor_maturities, beta)
+    par = par_yield(theor_maturities, beta)
     if shift:
-        spot_rates = (np.exp(spot_rates) - 1) 
+        spot_rates = (np.exp(spot_rates) - 1)
+        par =  (np.exp(par) - 1)
 
     #setting axes
     if ax is None:
@@ -61,7 +63,8 @@ def draw(beta, df, theor_maturities, title_date,
     if label is None:
         beta[:3] *= 100
         label = f'{beta.round(2)}'
-    ax.plot(theor_maturities, spot_rates, label=label, **kwargs)
+    ax.plot(theor_maturities, spot_rates*100, label=label, **kwargs)
+    ax.plot(theor_maturities, par*100, label='Par curve', **kwargs)
     #draw scatterplot of deals or not?
     if draw_points:
         y_scatter = df['ytm'].values
@@ -69,10 +72,10 @@ def draw(beta, df, theor_maturities, title_date,
         #size of points; depends on weight of transaction
         s = (weight(beta, df, weight_scheme=weight_scheme) / 
              weight(beta, df, weight_scheme=weight_scheme).sum())
-        ax.scatter(x_scatter, y_scatter, s=s * 15 * 1e3,
+        ax.scatter(x_scatter, y_scatter*100, s=s * 15 * 1e3,
                    facecolors='none', edgecolors='grey', alpha=0.9)
     #setting labels, ticks, legend and title
-    ax.set_title(f'Curves at {title_date} for {df.shape[0]} deals')
+    ax.set_title(f'Кривые построенные на {pd.to_datetime(title_date):%d.%m.%Y}')
     ax.set_ylabel('%')
     ax.set_xlabel('Tenor in years')
     ax.set_xticks(np.arange(0, longest_maturity_year + 1, 1))
