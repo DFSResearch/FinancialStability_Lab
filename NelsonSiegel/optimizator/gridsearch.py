@@ -63,6 +63,7 @@ class grid_search():
         self.beta_best = None
         self.update_date = None
         self.iter_dates = None
+	self.best_betas
         
     #actual minimizaiton
     def minimization_del(self, tau, Loss, loss_args, beta_init, **kwargs):
@@ -337,7 +338,7 @@ class grid_search():
             best_betas = pickle.loads(g['betas'][()])
             params = pickle.loads(g['params'][()])
             samples = pickle.loads(g['samples'][()])
-            dropped = pickle.loads(g['samples'][()])
+            dropped = pickle.loads(g['dropped'][()])
             
             
         self.previous_curve = best_betas.iloc[-1].copy()
@@ -470,6 +471,12 @@ class grid_search():
         self.loss_frame = self.loss_grid(**kwargs)
         #loss_frame = self.filter_frame(loss_frame)
         self.beta_best = self.loss_frame.loc[self.loss_frame['loss'].argmin(), :].values[:-1]
+	best_betas = {}
+        for date in self.settle_dates:
+            idx = self.loss_res[date].loc[:, 'loss'].idxmin()
+            best_betas[date] = self.loss_res[pd.to_datetime(date)].loc[idx, ['b0','b1','b2','teta']].values
+	self.best_betas = best_betas
+		  
         if return_frame:
             return self.beta_best, self.loss_frame
         else:
