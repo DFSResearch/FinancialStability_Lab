@@ -36,7 +36,7 @@ class Bond():
             coupon_rate = first_date['coupon_rate']
             if np.isnan(coupon_rate):
                 #first try to use ytm
-                if ~np.isnan(first_date.ytm) and (first_date.ytm != 0) and and (first_date.deal_price == self.face_value):
+                if ~np.isnan(first_date.ytm) and (first_date.ytm != 0) and (first_date.deal_price == self.face_value):
                         coupon_rate = first_date.ytm
                         self.unusual_cr = True if coupon_rate > 25 else False
                 #then if it fail, clean_price  
