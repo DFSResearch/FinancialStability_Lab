@@ -63,7 +63,7 @@ class grid_search():
         self.beta_best = None
         self.update_date = None
         self.iter_dates = None
-        self.best_betas
+        self.best_betas = None
         
     #actual minimizaiton
     def minimization_del(self, tau, Loss, loss_args, beta_init, **kwargs):
