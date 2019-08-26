@@ -7,7 +7,7 @@ from scipy.optimize import minimize
 
 from datapreparation.adaptive_sampling import creating_sample
 import CONFIG
-from ns_func import Z
+from ns_func import Z, par_yield
 
 #checking if dask is installed
 try:
@@ -147,7 +147,7 @@ class grid_search():
             
             if (self.inertia) & (len(self.previous_curve)!=0):
                 print(f'diff to previous curve, modified Z-score threshold: {thresh}')
-                diff = np.abs(points.loc[:,'ytm']- (np.exp(Z(points.loc[:,'span']/365, self.previous_curve))-1))*100
+                diff = np.abs(points.loc[:,'ytm']- (np.exp(par_yield(points.loc[:,'span'].values/365, self.previous_curve))-1))*100
             else:
                 print('first filtering')
                 median = np.median(points.loc[:,'ytm'])
