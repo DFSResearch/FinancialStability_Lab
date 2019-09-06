@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 import numpy as np
 import pickle
@@ -64,6 +65,7 @@ class grid_search():
         self.update_date = None
         self.iter_dates = None
         self.best_betas = None
+        self.logger = logging.getLogger(__name__)
         
     #actual minimizaiton
     def minimization_del(self, tau, Loss, loss_args, beta_init, **kwargs):
@@ -85,7 +87,7 @@ class grid_search():
     
        
         '''
-        print('now tau = ', tau)
+        self.logger.debug(f'minimization_del: tau = {tau}')
         l_args = [arg for arg in loss_args]
         l_args.append(tau)
         l_args = tuple(l_args)
@@ -128,11 +130,11 @@ class grid_search():
 #                points = points.loc[:,'ytm'][:,None]
             
             if (self.inertia) & (len(self.previous_curve)!=0):
-                print(f'diff to previous curve, Z-score threshold: {thresh}')
+                self.logger.debug(f'diff to previous curve, Z-score threshold: {thresh}')
                 diff = (points.loc[:,'ytm']*100 - (np.exp(Z(points.loc[:,'span']/365, self.previous_curve))-1)*100)
             else:
-    #            print(points)
-                print('first filtering')
+    #            self.logger.debug(points)
+                self.logger.debug('first filtering')
                 mean = np.mean(points.loc[:,'ytm'])
                 diff = (points.loc[:,'ytm'] - mean)
                 
@@ -146,10 +148,10 @@ class grid_search():
 #                points = points.loc[:,'ytm'][:,None]
             
             if (self.inertia) & (len(self.previous_curve)!=0):
-                print(f'diff to previous curve, modified Z-score threshold: {thresh}')
+                self.logger.debug(f'diff to previous curve, modified Z-score threshold: {thresh}')
                 diff = np.abs(points.loc[:,'ytm']- (np.exp(par_yield(points.loc[:,'span'].values/365, self.previous_curve))-1))*100
             else:
-                print('first filtering')
+                self.logger.debug('first filtering')
                 median = np.median(points.loc[:,'ytm'])
 #                diff = (points.loc[:,'ytm']*100- median*100)**2
                 diff = np.abs(points.loc[:,'ytm'] - median)*100
@@ -183,6 +185,8 @@ class grid_search():
     
        
         '''        
+        self.logger.debug('gen_subsets')
+
         self.tasks = []
         self.data_different_dates = {}
         
@@ -204,7 +208,7 @@ class grid_search():
             for b in self.results[i].bond_maturity_type.unique():
                 bsample = self.results[i].loc[self.results[i].loc[:,'bond_maturity_type']==b]
                 zscores = self.is_outlier(bsample.loc[:, ['ytm']])
-                print(f'Z-score: {zscores[2]}')
+                self.logger.debug(f'Z-score: {zscores[2]}')
                 self.results[i].loc[self.results[i].loc[:,'bond_maturity_type']==b, 'std']=zscores[2]
                 
                 bind_out = bsample.loc[(zscores[1])&(bsample.loc[:,'deal_type']!=1)].index.values
@@ -212,12 +216,12 @@ class grid_search():
                     ind_out.append(bind_out)
             ind_out = [item for sublist in ind_out for item in sublist]
             
-            print(f'DF shape: {self.results[i].shape} - original\n')
-            print(f'Deals dropped:\n {ind_out}\n')
+            self.logger.debug(f'DF shape: {self.results[i].shape} - original')
+            self.logger.debug(f'Deals dropped:\n {ind_out}')
             self.dropped_deals[settle_date] = self.results[i].loc[ind_out,:]
             self.results[i].drop(ind_out, inplace = True)
-            print(f'DF shape: {self.results[i].shape} - adjusted\n')
-            print(f'Generating sample for {settle_date:%d.%m.%Y} - Done!\n')
+            self.logger.debug(f'DF shape: {self.results[i].shape} - adjusted')
+            self.logger.debug(f'Generating sample for {settle_date:%d.%m.%Y} - Done!')
             self.data_different_dates[settle_date] = self.results[i]
 
         self.results = []
@@ -243,6 +247,8 @@ class grid_search():
     
        
         '''   
+        self.logger.debug('gen_one_date')
+
         if not hasattr(self, 'data_different_dates'):
             self.data_different_dates = {}
             
@@ -257,7 +263,7 @@ class grid_search():
         for b in self.data_different_dates[settle_date].bond_maturity_type.unique().sort_values():
             bsample = self.data_different_dates[settle_date].loc[self.data_different_dates[settle_date].loc[:,'bond_maturity_type']==b]
             zscores = self.is_outlier(bsample.loc[:, ['ytm', 'span']])
-            print(f'Z-score: {zscores[0]},\n {zscores[1]},\n {bsample.loc[:,"ytm"]}')
+            self.logger.debug(f'Z-score: {zscores[0]}, {zscores[1]}, {bsample.loc[:,"ytm"]}')
             self.data_different_dates[settle_date].loc[self.data_different_dates[settle_date].loc[:,'bond_maturity_type']==b, 'std']=zscores[2]
             bind_out = bsample.loc[(zscores[1])&(bsample.loc[:,'deal_type']!=1)].index.values
             
@@ -265,14 +271,13 @@ class grid_search():
                 ind_out.append(bind_out)
         ind_out = [item for sublist in ind_out for item in sublist]
         
-        print(f'DF shape: {self.data_different_dates[settle_date].shape} - original\n')
-        print(f'Deals dropped:\n {ind_out}\n')
+        self.logger.debug(f'DF shape: {self.data_different_dates[settle_date].shape} - original')
+        self.logger.debug(f'Deals dropped: {ind_out}')
         self.dropped_deals[settle_date] = self.data_different_dates[settle_date].loc[ind_out,:]
         self.data_different_dates[settle_date].drop(ind_out, inplace = True)
-        print(f'DF shape: {self.data_different_dates[settle_date].shape} - adjusted\n')
+        self.logger.debug(f'DF shape: {self.data_different_dates[settle_date].shape} - adjusted')
         
-       
-        print(f'Generating sample for {settle_date:%d.%m.%Y} - Done!\n')
+        self.logger.debug(f'Generating sample for {settle_date:%d.%m.%Y} - Done!')
     
     def new_dates(self, new_end_date = None):
         
@@ -320,21 +325,21 @@ class grid_search():
                     }
             g.attrs.update(meta)
         
-            print('saving data:\n')
-            print('-'*10)
+            self.logger.debug('saving data:')
+            self.logger.debug('-'*10)
             for m in g.attrs.keys():
-                print('{}: {}'.format(m, g.attrs[m]))
-            print('-'*10, '\n')
+                self.logger.debug(f'{m}: {g.attrs[m]}')
+            self.logger.debug('-'*10)
                 
     def load(self):
         
         with h5py.File('grid_data.hdf5', 'r') as f:
             g = f['curveData']
-            print('loading stored data:')
-            print('-'*10)
+            self.logger.debug('loading stored data:')
+            self.logger.debug('-'*10)
             for m in g.attrs.keys():
-                print('{}: {}'.format(m, g.attrs[m]))
-            print('-'*10, '\n')
+                self.logger.debug(f'{m}: {g.attrs[m]}')
+            self.logger.debug('-'*10, '\n')
             best_betas = pickle.loads(g['betas'][()])
             params = pickle.loads(g['params'][()])
             samples = pickle.loads(g['samples'][()])
@@ -346,22 +351,28 @@ class grid_search():
         self.data_different_dates = samples
         self.dropped_deals = dropped
         
-        print('Following parameters were used:')
-        print('-'*10)
+        # self.logger.debug('Following parameters were used:') #uncomment for diagnostics
+        # self.logger.debug('-'*10) #uncomment for diagnostics
         for k,v in params.items():
-#            print(f'{k}: {v}') #uncomment for diagnostics
+            # self.logger.debug(f'{k}: {v}') #uncomment for diagnostics
             self.__dict__[k] = v
     
     #creation of loss frame grid
     def loss_grid(self, **kwargs):
+        self.logger.debug('loss_grid')
+
         #if num_worker == 1 dask will not be used at all to avoid overhead expenses
         if self.num_workers == 1:
+            self.logger.debug('start: num_workers == 1')
+
             res_ = []
             for i, tau in enumerate(self.tau_grid):
                 res = self.minimization_del(tau, self.Loss, 
                           self.loss_args, self.beta_init, **kwargs)
                 res_.append(res)
         elif self.several_dates:
+            self.logger.debug('start: several_dates')
+
             loss_args = self.loss_args
             
             if not hasattr(self, 'data_different_dates'):
@@ -397,10 +408,11 @@ class grid_search():
             loss_frame['loss'] = [res.fun for res in res_]
             
             self.loss_res[date] = loss_frame
-            print(f'Optimization for {date:%d.%m.%Y} - Done!\n')
+            self.logger.info(f'Optimization for {date:%d.%m.%Y} - Done!')
         
         elif self.inertia:
-            print('start')
+            self.logger.debug('start: inertia')
+
             loss_args = self.loss_args
             
             if self.update_date != None:
@@ -420,12 +432,12 @@ class grid_search():
                 constr = ({'type':'eq',
                            'fun': lambda x: np.array(x[0] + x[1]- np.log(1 + self.tonia_df.loc[settle_date][0]))},)
                 
-                print('populating distributed tasks')
+                self.logger.debug('populating distributed tasks')
                 #parallelization of loop via dask multiprocessing
                 values = [delayed(self.minimization_del)(tau, self.Loss, 
                           l_args, self.beta_init, constraints = constr, **kwargs) for tau in self.tau_grid]
                 
-                print('start minimizing')
+                self.logger.info('start minimizing')
                 res_ = compute(*values, scheduler='processes', num_workers=self.num_workers)
                 
                 #putting betas and Loss value in Pandas DataFrame
@@ -440,7 +452,10 @@ class grid_search():
                 self.beta_best = loss_frame.loc[loss_frame['loss'].idxmin(), :].values[:-1]
                 self.beta_init = self.beta_best[:-1].copy()
                 self.previous_curve = self.beta_best.copy()
-                print(f'Optimization for {settle_date:%d.%m.%Y} - Done!\nBeta best: {self.beta_best}\nPrevious beta set to {self.previous_curve}\n')
+
+                self.logger.info(f'Optimization for {settle_date:%d.%m.%Y} - Done!')
+                self.logger.info(f'Beta best: {self.beta_best}')
+                self.logger.info(f'Previous beta set to {self.previous_curve}')
                 
             self.update_date = None          
         return loss_frame
@@ -457,14 +472,13 @@ class grid_search():
         #printing info about № of dropped rows
         n_rows = loss_frame.shape[0]
         n_dropped_rows = n_rows - loss_frame_filtered.shape[0]
-        print('{0} out of {1} of rows were dropped'.format(n_dropped_rows, n_rows))
+        self.logger.debug(f'{n_dropped_rows} out of {n_rows} of rows were dropped')
         return loss_frame_filtered
     
     #actual fitting of data
     def fit(self, return_frame=False, **kwargs):
         if use_one_worker:
-            print('Multiprocessing is not enabled as dask is not installed\n'
-                  'Install dask to enbale multiprocessing')
+            self.logger.warning('Multiprocessing is not enabled as dask is not installed. Install dask to enbale multiprocessing.')
             self.num_workers = 1
         else:
             self.num_workers = self.num_workers
