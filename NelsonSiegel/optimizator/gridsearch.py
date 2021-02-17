@@ -87,18 +87,12 @@ class grid_search():
     
        
         '''
-        self.logger.debug(f'minimization_del: tau = {tau}')
+        logger = logging.getLogger(__name__)
+        logger.debug(f'minimization_del: tau = {tau}')
         l_args = [arg for arg in loss_args]
         l_args.append(tau)
         l_args = tuple(l_args)
-        res_ = minimize(Loss, beta_init, args=l_args, **kwargs, 
-                        callback=lambda xk: print(xk, Loss(beta=xk, df=l_args[0], 
-                                                           coupons_cf=l_args[1], 
-                                                           streak_data=l_args[2], 
-                                                           rho=l_args[3], 
-                                                           weight_scheme=l_args[4], tau=tau))
-                        ) 
-                        
+        res_ = minimize(Loss, beta_init, args=l_args, **kwargs, callback=lambda xk: logger.debug(f'{xk}, {Loss(beta=xk, df=l_args[0], coupons_cf=l_args[1], streak_data=l_args[2], rho=l_args[3], weight_scheme=l_args[4], tau=tau)}')) 
         return res_
     
     def is_outlier(self, points, thresh=3.5, score_type ='mzscore'):
